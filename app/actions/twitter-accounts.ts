@@ -3,6 +3,7 @@
 import { cookies } from "next/headers"
 import { revalidatePath } from "next/cache"
 import type { TwitterAccount, AccountStatus, RateLimitInfo, AccountHealth } from "@/types/twitter"
+import { db } from '@/lib/db'
 
 // Get all connected Twitter accounts
 export async function getConnectedAccounts(): Promise<TwitterAccount[]> {
@@ -65,34 +66,24 @@ export async function getConnectedAccounts(): Promise<TwitterAccount[]> {
 // Remove a connected Twitter account
 export async function removeTwitterAccount(accountId: string): Promise<{ success: boolean }> {
   try {
-    // In a real app, you would remove this from a database
-    // For demo purposes, we'll clear the cookie
-    const cookieStore = cookies()
-    cookieStore.delete("twitter_account_info")
-
-    // Revalidate the accounts page
-    revalidatePath("/settings/accounts")
-
+    await db.twitterAccount.delete({
+      where: { id: accountId },
+    })
     return { success: true }
   } catch (error) {
-    console.error("Error removing Twitter account:", error)
-    return { success: false }
+    console.error('Error removing Twitter account:', error)
+    return { success: false, message: 'Failed to remove account' }
   }
 }
 
 // Verify Twitter credentials
 export async function verifyTwitterCredentials(accountId: string): Promise<{ success: boolean; message: string }> {
   try {
-    // In a real app, you would verify the credentials with the Twitter API
-    // For demo purposes, we'll just return success
-
-    // Revalidate the accounts page
-    revalidatePath("/settings/accounts")
-
-    return { success: true, message: "Twitter credentials verified successfully" }
+    // TODO: Implement Twitter API verification
+    return { success: true }
   } catch (error) {
-    console.error("Error verifying Twitter credentials:", error)
-    return { success: false, message: "Failed to verify Twitter credentials" }
+    console.error('Error verifying Twitter credentials:', error)
+    return { success: false, message: 'Failed to verify credentials' }
   }
 }
 
@@ -169,5 +160,19 @@ export async function reconnectAccount(accountId: string): Promise<{ success: bo
       success: false,
       message: "Failed to initiate account reconnection",
     }
+  }
+}
+
+export async function getTwitterAccounts(): Promise<TwitterAccount[]> {
+  try {
+    const accounts = await db.twitterAccount.findMany({
+      orderBy: {
+        createdAt: 'desc',
+      },
+    })
+    return accounts
+  } catch (error) {
+    console.error('Error fetching Twitter accounts:', error)
+    return []
   }
 }

@@ -4,6 +4,7 @@ import { DashboardShell } from '@/components/dashboard-shell'
 import { DashboardHeader } from '@/components/dashboard-header'
 import { TwitterAccountsClient } from '@/components/twitter-accounts-client'
 import { ErrorBoundaryClient } from '@/components/ErrorBoundaryClient'
+import { getTwitterAccounts } from '@/app/actions/twitter-accounts'
 
 function LoadingState() {
   return (
@@ -18,7 +19,9 @@ function LoadingState() {
   )
 }
 
-export default function SettingsAccountsPage() {
+export default async function SettingsAccountsPage() {
+  const accounts = await getTwitterAccounts()
+
   return (
     <DashboardShell>
       <DashboardHeader
@@ -28,9 +31,7 @@ export default function SettingsAccountsPage() {
       <div className="grid gap-8">
         <ErrorBoundaryClient>
           <Suspense fallback={<LoadingState />}>
-            <TwitterAccountsClient>
-              <TwitterAccountsList />
-            </TwitterAccountsClient>
+            <TwitterAccountsClient accounts={accounts} />
           </Suspense>
         </ErrorBoundaryClient>
       </div>
