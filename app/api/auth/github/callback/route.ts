@@ -3,9 +3,9 @@ import { cookies } from 'next/headers'
 import { db } from '@/lib/db'
 import {
   exchangeCodeForToken,
-  getTwitterUserProfile,
-  saveTwitterTokens,
-} from '@/lib/twitter-oauth'
+  getGitHubUserProfile,
+  getGitHubUserEmails,
+} from '@/lib/github-oauth'
 
 export async function GET(request: Request) {
   try {
@@ -17,7 +17,7 @@ export async function GET(request: Request) {
 
     // Handle OAuth errors
     if (error) {
-      console.error('Twitter OAuth error:', error, errorDescription)
+      console.error('GitHub OAuth error:', error, errorDescription)
       return NextResponse.redirect(
         `${process.env.NEXTAUTH_URL}/login?error=${encodeURIComponent(
           errorDescription || 'Authentication failed'
@@ -25,34 +25,59 @@ export async function GET(request: Request) {
       )
     }
 
+    // Validate required parameters
     if (!code) {
       throw new Error('No authorization code provided')
+    }
+
+    if (!state) {
+      throw new Error('No state parameter provided')
+    }
+
+    // Validate state from cookie
+    const cookieStore = cookies()
+    const storedState = cookieStore.get('github_oauth_state')?.value
+
+    if (!storedState || storedState !== state) {
+      throw new Error('Invalid state parameter')
     }
 
     // Exchange code for tokens
     const tokens = await exchangeCodeForToken(code)
 
-    // Get user profile
-    const profile = await getTwitterUserProfile(tokens.access_token)
+    if (!tokens.access_token) {
+      throw new Error('Failed to obtain access token')
+    }
+
+    // Get user profile and emails
+    const [profile, emails] = await Promise.all([
+      getGitHubUserProfile(tokens.access_token),
+      getGitHubUserEmails(tokens.access_token),
+    ])
+
+    if (!profile.login) {
+      throw new Error('Failed to get user profile')
+    }
+
+    // Get primary email
+    const primaryEmail = emails.find((email: any) => email.primary)?.email
 
     // Create or update account
-    const account = await db.twitterAccount.upsert({
-      where: { username: profile.data.username },
+    const account = await db.githubAccount.upsert({
+      where: { username: profile.login },
       create: {
-        name: profile.data.name,
-        username: profile.data.username,
-        profileImage: profile.data.profile_image_url,
+        name: profile.name || profile.login,
+        username: profile.login,
+        email: primaryEmail,
+        profileImage: profile.avatar_url,
         accessToken: tokens.access_token,
-        refreshToken: tokens.refresh_token,
-        expiresAt: new Date(Date.now() + tokens.expires_in * 1000),
         scope: tokens.scope,
       },
       update: {
-        name: profile.data.name,
-        profileImage: profile.data.profile_image_url,
+        name: profile.name || profile.login,
+        email: primaryEmail,
+        profileImage: profile.avatar_url,
         accessToken: tokens.access_token,
-        refreshToken: tokens.refresh_token,
-        expiresAt: new Date(Date.now() + tokens.expires_in * 1000),
         scope: tokens.scope,
       },
     })
@@ -60,12 +85,12 @@ export async function GET(request: Request) {
     // Create response with redirect
     const response = NextResponse.redirect(
       `${process.env.NEXTAUTH_URL}/settings/accounts?success=true&message=${encodeURIComponent(
-        'Successfully connected Twitter account'
+        'Successfully connected GitHub account'
       )}`
     )
 
     // Set account info in cookie
-    response.cookies.set('twitter_account_info', JSON.stringify({
+    response.cookies.set('github_account_info', JSON.stringify({
       id: account.id,
       username: account.username,
       name: account.name,
@@ -78,12 +103,15 @@ export async function GET(request: Request) {
       path: '/',
     })
 
+    // Clear the OAuth state cookie
+    response.cookies.delete('github_oauth_state')
+
     return response
   } catch (error) {
-    console.error('Error in Twitter callback:', error)
+    console.error('Error in GitHub callback:', error)
     const errorMessage = error instanceof Error ? error.message : 'Authentication failed'
     return NextResponse.redirect(
       `${process.env.NEXTAUTH_URL}/login?error=${encodeURIComponent(errorMessage)}`
     )
   }
-}
+} 

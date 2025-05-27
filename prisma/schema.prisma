@@ -21,6 +21,35 @@ model TwitterAccount {
   profileImage  String?
   accessToken   String
   refreshToken  String?
+  tokenType     String?  @default("Bearer")
+  expiresAt     DateTime?
+  scope         String?
+  isActive      Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  posts         Post[]
+}
+
+model GitHubAccount {
+  id           String   @id @default(cuid())
+  name         String
+  username     String   @unique
+  email        String?
+  profileImage String?
+  accessToken  String
+  scope        String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+model Post {
+  id            String   @id @default(cuid())
+  content       String
+  scheduledFor  DateTime?
+  publishedAt   DateTime?
+  status        String   @default("draft") // draft, scheduled, published, failed
+  accountId     String
+  account       TwitterAccount @relation(fields: [accountId], references: [id])
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 }
