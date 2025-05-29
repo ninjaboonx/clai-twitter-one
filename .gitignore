@@ -2,6 +2,7 @@
 
 # dependencies
 /node_modules
+<<<<<<< HEAD
 /.pnp
 .pnp.*
 .yarn/*
@@ -12,6 +13,8 @@
 
 # testing
 /coverage
+=======
+>>>>>>> c77b262d8c84c17d7035b7294365e86d51d00c0d
 
 # next.js
 /.next/
@@ -20,17 +23,24 @@
 # production
 /build
 
+<<<<<<< HEAD
 # misc
 .DS_Store
 *.pem
 
+=======
+>>>>>>> c77b262d8c84c17d7035b7294365e86d51d00c0d
 # debug
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
 
+<<<<<<< HEAD
 # env files (can opt-in for committing if needed)
+=======
+# env files
+>>>>>>> c77b262d8c84c17d7035b7294365e86d51d00c0d
 .env*
 
 # vercel
@@ -39,3 +49,7 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+<<<<<<< HEAD
+=======
+/lib/generated/prisma
+>>>>>>> c77b262d8c84c17d7035b7294365e86d51d00c0d
